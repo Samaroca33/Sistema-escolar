@@ -1,0 +1,42 @@
+SISTEMA DE PORTARIA ESCOLAR ANGULAR — FRONT-END PREPARADO PARA API E ESP32
+
+REQUISITOS
+- Node.js LTS e npm instalados.
+- Back-end/API da escola ativo.
+- Google Chrome ou Microsoft Edge para usar Web Serial com o ESP32.
+
+INSTALAÇÃO
+1. Extraia o ZIP e abra esta pasta no VS Code.
+2. No terminal, execute: npm install
+3. Configure a URL da API em src/app/core/api.config.ts.
+   Padrão definido: http://localhost:8080/api
+4. Execute: npm start
+5. Abra http://localhost:4200/
+
+CONTRATO DA API ESPERADO
+- GET  /api/alunos       -> retorna uma lista JSON de alunos (ou {"content": [...]})
+- POST /api/alunos       -> recebe os campos do aluno em JSON e retorna o aluno salvo com id.
+- Campos esperados: id, name, grade, class, parentName, parentRelation, rfidCard, isVan, avatarColor e opcionalmente photo.
+- Configure CORS no back-end para permitir a origem do Angular (ex.: http://localhost:4200).
+- A base de alunos não é salva no localStorage; o Angular consulta e envia os dados à API.
+
+LEITOR ESP32 + RFID
+- Clique em “Conectar ESP32 por USB” e selecione a porta serial correta.
+- O ESP32 deve transmitir o UID do cartão em texto, seguido por quebra de linha (Serial.println(uid)), a 115200 baud.
+- O leitor usa Web Serial, disponível principalmente no Chrome/Edge em localhost ou HTTPS.
+- O UID recebido é comparado com o campo rfidCard retornado pela API. Se não houver aluno, a tela informa “Cartão não cadastrado”.
+- Se o firmware imprimir mensagens de inicialização, mantenha o UID em uma linha separada.
+
+FLUXO DE SAÍDA
+Portaria (RFID) ou Chamada Manual -> fila da inspetora -> confirmação -> relatório/TV.
+A fila, as chamadas e o tema seguem sendo estado local do navegador; a base oficial de alunos fica no back-end.
+
+OBSERVAÇÃO IMPORTANTE
+Este ZIP contém o front-end preparado para um contrato REST presumido. Como o código do back-end não foi enviado, os endpoints e o formato JSON precisam corresponder ao servidor real. A comunicação física depende do firmware do ESP32 emitir o UID por Serial.println e do navegador conceder acesso à porta USB.
+
+
+INTEGRACAO COM SPRING BOOT
+--------------------------
+Consulte o arquivo INTEGRACAO_API.txt para configurar o IP do back-end, testar a API e entender quais campos ainda precisam ser implementados no Java.
+
+Antes de executar em computadores diferentes, altere src/app/core/api.config.ts para usar o IPv4 real do computador do Spring Boot. A configuração enviada permanece em localhost como padrão de desenvolvimento local.

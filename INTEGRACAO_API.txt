@@ -1,0 +1,67 @@
+INTEGRACAO ANGULAR + SPRING BOOT
+================================
+
+O que já foi conectado no Angular:
+- GET /api/alunos para carregar alunos.
+- GET /api/cartoes para relacionar UID de cartões de aluno.
+- POST /api/alunos para criar o aluno.
+- POST /api/cartoes para cadastrar o UID como cartão do aluno após criar o aluno.
+- POST /api/leituras para processar UID vindo do ESP32 pela porta serial USB.
+- POST /api/leituras/confirmacao para escolher um aluno quando o cartão é de responsável.
+- GET /api/chamadas para carregar a fila oficial do back-end (atualização a cada 5 segundos).
+- POST /api/chamadas/manual para chamada manual.
+- POST /api/chamadas/{id}/saida para confirmar a saída.
+
+1) AJUSTAR O IP DO BACK-END
+Abra src/app/core/api.config.ts. Troque localhost pelo IPv4 do computador que executa o Spring Boot quando Angular e back-end estiverem em computadores diferentes.
+Exemplo apenas ilustrativo:
+export const API_BASE_URL = 'http://192.168.1.100:8080/api';
+Use o IPv4 real e a porta real do seu Spring Boot.
+
+2) NO COMPUTADOR DO BACK-END
+- Inicie o Spring Boot.
+- Garanta que ele aceite conexões da rede (se necessário, server.address=0.0.0.0 em application.properties).
+- Permita a porta do Spring Boot no Firewall da rede privada.
+- Teste http://IP_DO_BACKEND:8080/api/alunos no navegador do computador Angular.
+- O CorsConfig enviado já aceita origens variadas durante desenvolvimento. Em produção, restrinja as origens.
+
+3) COMO EXECUTAR O ANGULAR
+No terminal dentro da pasta do projeto:
+npm install
+npm start
+Abra http://localhost:4200
+
+LIMITAÇÕES QUE DEPENDEM DO BACK-END
+-----------------------------------
+O AlunoResponse atual não devolve turmaId/turma, responsável, nem campos de van. O model Aluno não tem relação com Turma e AlunoService ignora o request.turmaId. Por isso o Angular exibe turma como “Não informado” e não consegue persistir ano/turma ou vínculo de responsável com o código atual.
+
+O cadastro atual gera uma matrícula ALU + timestamp porque o formulário não possui campo matrícula. Para salvar turma, o back-end precisa adicionar relação @ManyToOne Turma em Aluno, usar request.turmaId em AlunoService e incluir os dados da turma no AlunoResponse. O DTO de resposta também deve devolver turmaId ou turma com nome/serie.
+
+O formulário de responsável só tem nome e parentesco; o back-end exige criar um Responsavel separado e depois criar vínculo com POST /api/responsaveis/vinculos. Será preciso ajustar o formulário e implementar esse fluxo no Angular para salvar de verdade os dados do responsável.
+
+A foto selecionada no navegador é convertida em Data URL. O back-end atual tem apenas fotoUrl e não oferece upload de arquivo; o Angular só envia fotoUrl quando ela já é uma URL http/https. Para persistir fotos locais, implemente upload no back-end ou armazenamento de imagem apropriado e grave a URL retornada.
+
+O campo “usa van” e os motoristas são demonstrativos no Angular: o back-end fornecido não possui endpoint/relacionamento para vincular alunos a motoristas. Não considere essa informação persistida.
+
+O relatório de saídas do Angular ainda é uma lista local da sessão; o back-end só expõe eventos por aluno em GET /api/eventos/aluno/{alunoId}, sem endpoint global de relatório. Para relatório completo, criar endpoint próprio no back-end.
+
+RFID USB: esta versão lê o texto enviado pela porta serial USB usando Web Serial (Chrome/Edge em localhost/HTTPS). O firmware ESP32 deve imprimir o UID em uma linha, por exemplo:
+04 A1 B2 C3
+Não precisa imprimir “UID:” porque o código também aceita o prefixo, mas deve terminar a linha com newline. A comunicação USB serial só funciona no computador fisicamente conectado ao ESP32. Se o ESP32 for enviar pela rede Wi-Fi, será necessário implementar HTTP no firmware e apontar para POST /api/leituras.
+
+Observação: o fluxo de leitura de cartão de aluno cria a chamada no back-end imediatamente. O botão de chamada manual usa POST /api/chamadas/manual. O Angular não usa localStorage como fila oficial; a fila vem do endpoint /api/chamadas.
+
+4) WEBSOCKET NA TV
+------------------
+O Angular tenta conectar em WS_URL (src/app/core/api.config.ts), usando STOMP sobre WebSocket,
+e se inscreve em WS_TOPIC. Quando chega uma mensagem STOMP MESSAGE, ele recarrega /api/chamadas
+para atualizar os quadrados da TV. Se o WebSocket cair, tenta reconectar e mantém a consulta REST
+periódica como alternativa.
+
+Configuração atual:
+WS_URL = ws://10.86.142.29/ws
+WS_TOPIC = /topic/patio
+
+Confirme que esses valores correspondem ao endpoint e ao tópico configurados no Spring Boot.
+Este cliente usa WebSocket STOMP puro; se o endpoint do servidor estiver configurado apenas com
+SockJS, será necessário adaptar o cliente para SockJS.
