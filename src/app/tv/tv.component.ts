@@ -116,6 +116,9 @@ export class TvComponent implements AfterViewInit, OnDestroy {
   constructor(public svc: PortariaService, private zone: NgZone) { }
 
   ngAfterViewInit(): void {
+    // Garante a carga dos alunos também na TV (janela separada), para que
+    // nome/turma apareçam mesmo se o serviço já estiver instanciado.
+    if (!this.svc.students().length) void this.svc.loadStudents();
     const el = this.stage.nativeElement;
     const update = () => this.box.set({ w: el.clientWidth, h: el.clientHeight });
     update();
